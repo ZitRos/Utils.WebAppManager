@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for Windows (x86-64) 2017.2 (Build 543U)" ts="2017-04-02 13:10:18">
+<Class name="Utils.WebAppManager">
+<Description>
+This class simplifies work with web applications.
+For Caché 2016.2+
+@author ZitRo</Description>
+<TimeChanged>64373,60792.692356</TimeChanged>
+<TimeCreated>64373,60792.692356</TimeCreated>
+
+<Method name="Register">
+<Description><![CDATA[
+Registers new or updates existing web application with new config (as JSON dynamic object).
+List the properties you can assign to JSON object with the next command:
+%SYS > do ##class(Security.Applications).Get("/csp/user", .props) zw props
+
+Usage example: ##class(Utils.WebAppManager).Register("/name", { "NameSpace": "USER" })]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>name:%String,config:%DynamicObject={{}}</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ns = $Namespace
+    new $Namespace
+    try {
+        set $Namespace = "%SYS"
+    } catch (e) {
+        return e.AsSystemError()
+    }
+    set st = $$$OK
+    set spec("AutheEnabled") = $$$AutheCache // defaults
+    set spec("NameSpace") = ns
+    set iter = config.%GetIterator()
+	while iter.%GetNext(.key, .value) {
+	    set spec(key) = value
+	}
+    if ('##class(Security.Applications).Exists(name)) {
+        return ##class(Security.Applications).Create(name, .spec)
+    }
+    return ##class(Security.Applications).Modify(name, .spec)
+]]></Implementation>
+</Method>
+
+<Method name="Delete">
+<Description>
+Deletes the specified application only if it matches matchingConfig.
+If matchingConfig object is empty, deletes the application. You can specify only those matches
+you need to check.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>name:%String,matchingConfig:%DynamicObject={{}}</FormalSpec>
+<Implementation><![CDATA[
+    new $Namespace
+    try {
+        set $Namespace = "%SYS"
+    } catch (e) {
+        return e.AsSystemError()
+    }
+    set st = $$$OK
+    return:'##class(Security.Applications).Exists(name)
+    do ##class(Security.Applications).Get(name, .spec)
+    set iter = matchingConfig.%GetIterator()
+    while iter.%GetNext(.key, .value) {
+        return:($get(spec(key)) '= value) st
+    }
+    return ##class(Security.Applications).Delete(name)
+]]></Implementation>
+</Method>
+</Class>
+</Export>
